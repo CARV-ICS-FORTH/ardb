@@ -37,7 +37,20 @@
 #include "thread/spin_mutex_lock.hpp"
 #include "db/db.hpp"
 #include "util/string_helper.hpp"
+#include <iostream>
+extern "C"{
+#include <./../../../../db_bench/kreon/kreon_lib/allocator/allocator.h>
+#include <./../../../../db_bench/kreon/kreon_lib/btree/btree.h>
+#include <./../../../../db_bench/kreon/kreon_lib/scanner/scanner.h>
+#include <./../../../../db_bench/kreon/kreon_lib/rocksdbwrapi/rocksdbwrapi.h>
+}
 
+std::string Kreon_volume_name= "/tmp/gstyl.dat";
+std::string  Kreon_name = "gstyl";
+int64_t device_size;
+db_handle* hd = NULL;
+
+using namespace std;
 OP_NAMESPACE_BEGIN
 
     static inline rocksdb::Slice to_rocksdb_slice(const Slice& slice)
@@ -698,6 +711,10 @@ OP_NAMESPACE_BEGIN
 
     int RocksDBEngine::ReOpen(rocksdb::Options& options)
     {
+        if(hd != NULL){
+            std::cout << "TRUEEEEEEE" << endl;
+            db_close(hd);
+        }
         Close();
         RWLockGuard<SpinRWLock> guard(m_lock, true);
         std::vector<std::string> column_families;
@@ -735,6 +752,8 @@ OP_NAMESPACE_BEGIN
             return -1;
         }
         g_rocksdb = m_db;
+
+        hd = db_open((char*) Kreon_volume_name.c_str() , 0 , device_size , (char*) Kreon_name.       c_str() , CREATE_DB);
         return 0;
     }
 
@@ -880,8 +899,18 @@ OP_NAMESPACE_BEGIN
         {
             s = m_db->Put(opt, cf, key_slice, value_slice);
         }
+        //krc_put();
+        //testprint();
+
+        insert_key_value(hd, (void*) key_slice.data() , (void*)value_slice.data() , key_slice.size(), value_slice.size());
+        void* found = find_key(hd , (void*) key_slice.data() , key_slice.size());
+        if(found == NULL){
+            std::cout << "Couldnt found inserted key" << std::endl;
+            exit(1);
+        }
         return rocksdb_err(s);
     }
+
     int RocksDBEngine::MultiGet(Context& ctx, const KeyObjectArray& keys, ValueObjectArray& values, ErrCodeArray& errs)
     {
         values.resize(keys.size());

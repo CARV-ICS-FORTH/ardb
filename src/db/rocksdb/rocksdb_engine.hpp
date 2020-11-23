@@ -46,6 +46,12 @@
 #include <vector>
 #include <sparsehash/dense_hash_map>
 #include <memory>
+extern "C"{
+#include <../../../../db_bench/kreon/kreon_lib/allocator/allocator.h>
+#include <../../../../db_bench/kreon/kreon_lib/btree/btree.h>
+#include <../../../../db_bench/kreon/kreon_lib/scanner/scanner.h>
+#include <../../../../db_bench/kreon/kreon_lib/rocksdbwrapi/rocksdbwrapi.h>
+}
 
 OP_NAMESPACE_BEGIN
 
@@ -124,7 +130,9 @@ OP_NAMESPACE_BEGIN
             int Init(const std::string& dir, const std::string& options);
             int Repair(const std::string& dir);
             int Put(Context& ctx, const KeyObject& key, const ValueObject& value);
+            Status krc_put(ColumnFamilyHandle* handle, slice* key , slice* value);
             int PutRaw(Context& ctx, const Data& ns, const Slice& key, const Slice& value);
+            Status krc_put(ColumnFamilyHandle* handle, const Slice* key , const Slice* value);
             int Get(Context& ctx, const KeyObject& key, ValueObject& value);
             int MultiGet(Context& ctx, const KeyObjectArray& keys, ValueObjectArray& values, ErrCodeArray& errs);
             int Del(Context& ctx, const KeyObject& key);
