@@ -246,7 +246,7 @@ else
 ifeq ($(storage_engine), rocksdb)
   STORAGE_ENGINE=$(ROCKSDB_LIBA)
   STORAGE_ENGINE_PATH=$(ROCKSDB_PATH)
-  INCS+=-I${ROCKSDB_PATH}/include -I${ROCKSDB_PATH} -I/home1/public/geostyl/kreon/kreon_lib/allocator -I/home1/public/geostyl/kreon/kreon_lib/scanner -I/home1/public/geostyl/kreon/kreon_lib/btree -I/home1/public/geostyl/kreon/kreon_lib/rocksdbwrapi  
+  INCS+=-I${ROCKSDB_PATH}/include -I${ROCKSDB_PATH} -I/home1/public/geostyl/db_bench/kreon/kreon_lib/allocator -I/home1/public/geostyl/db_bench/kreon/kreon_lib/scanner -I/home1/public/geostyl/db_bench/kreon/kreon_lib/btree -I/home1/public/geostyl/db_bench/kreon/kreon_lib/rocksdbwrap  
   LIBS:= ${ROCKSDB_LIBA} ${SNAPPY_LIBA} ${LIBS} ${KREON_LIBA} ${KREON_LIBLOG} 
   CXXFLAGS+=-D__USE_ROCKSDB__ -std=c++11
 else

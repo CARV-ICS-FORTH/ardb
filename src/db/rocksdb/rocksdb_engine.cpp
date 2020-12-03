@@ -38,12 +38,6 @@
 #include "db/db.hpp"
 #include "util/string_helper.hpp"
 #include <iostream>
-extern "C"{
-#include <./../../../../db_bench/kreon/kreon_lib/allocator/allocator.h>
-#include <./../../../../db_bench/kreon/kreon_lib/btree/btree.h>
-#include <./../../../../db_bench/kreon/kreon_lib/scanner/scanner.h>
-#include <./../../../../db_bench/kreon/kreon_lib/rocksdbwrapi/rocksdbwrapi.h>
-}
 
 std::string Kreon_volume_name= "/tmp/gstyl.dat";
 std::string  Kreon_name = "gstyl";
@@ -713,7 +707,7 @@ OP_NAMESPACE_BEGIN
     {
         if(hd != NULL){
             std::cout << "TRUEEEEEEE" << endl;
-            db_close(hd);
+            //db_close(hd);
         }
         Close();
         RWLockGuard<SpinRWLock> guard(m_lock, true);
@@ -899,7 +893,7 @@ OP_NAMESPACE_BEGIN
         {
             s = m_db->Put(opt, cf, key_slice, value_slice);
         }
-        //krc_put();
+        kreon_put(opt,key_slice,value_slice);
         //testprint();
 
         insert_key_value(hd, (void*) key_slice.data() , (void*)value_slice.data() , key_slice.size(), value_slice.size());
