@@ -44,11 +44,14 @@ extern "C"{
 #include "../../../../db_bench/kreon/kreon_lib/scanner/scanner.h"
 }
 
-std::string Kreon_volume_name= "/tmp/gstyl.dat";
+std::string Kreon_volume_name = "/dev/dmap/dmap1";
+//std::string Kreon_volume_name= "/tmp/gstyl.dat";
 std::string  Kreon_name = "gstyl";
 int64_t device_size;
-db_handle* hd = NULL;
-
+//db_handle* hd = NULL;
+db_handle* KreonDBs[64];
+int KreonSnapshots[64];
+int Kreondbs_num = 64;
 
 struct Kreoniterator* Kriter = NULL;
 
@@ -751,7 +754,31 @@ OP_NAMESPACE_BEGIN
         }
         g_rocksdb = m_db;
 
-        hd = db_open((char*) Kreon_volume_name.c_str() , 0 , device_size , (char*) Kreon_name.       c_str() , CREATE_DB);
+        int fd = open((const char*)Kreon_volume_name.c_str(), O_RDONLY);
+            if (fd == -1) {
+            perror("open");
+            exit(EXIT_FAILURE);         
+        }
+
+            if (ioctl(fd, BLKGETSIZE64, &device_size) == -1) {
+                perror("ioctl");
+                /*maybe we have a file?*/
+                printf("[%s:%s:%d] querying file size\n", __FILE__, __func__, __LINE__);
+                device_size = lseek(fd, 0, SEEK_END);
+                if (device_size == -1) {
+                    printf("[%s:%s:%d] failed to determine volume size exiting...\n",          __FILE__, __func__,__LINE__);
+                    perror("ioctl");
+                    exit(EXIT_FAILURE);             
+                }         
+            } 
+        close(fd);
+
+
+        for(int i = 0 ; i < Kreondbs_num; i++){
+            std::string db_name = "data" + std::to_string(i) + ".dat";
+            printf("Opening db:%s\n" , db_name.c_str());
+            KreonDBs[i] = db_open((char*) Kreon_volume_name.c_str() , 0 , device_size, (char*) db_name.c_str() , CREATE_DB);
+        }
         return 0;
     }
 
@@ -857,15 +884,16 @@ OP_NAMESPACE_BEGIN
         rocksdb::WriteBatch* batch = rocks_ctx.transc.Ref();
         if (NULL != batch)
         {
-            batch->Put(cf, key_slice, value_slice);
+            //batch->Put(cf, key_slice, value_slice);
         }
         else
         {
-            s = m_db->Put(opt, cf, key_slice, value_slice);
+            //s = m_db->Put(opt, cf, key_slice, value_slice);
         }
         return rocksdb_err(s);
     }
 
+    int putFlag = 0;
     int RocksDBEngine::Put(Context& ctx, const KeyObject& key, const ValueObject& value)
     {
         rocksdb::Status s;
@@ -889,18 +917,28 @@ OP_NAMESPACE_BEGIN
         rocksdb::Slice key_slice(encode_buffer.GetRawBuffer(), key_len);
         rocksdb::Slice value_slice(encode_buffer.GetRawBuffer() + key_len, value_len);
         rocksdb::WriteBatch* batch = rocks_ctx.transc.Ref();
-        if (NULL != batch)
-        {
-            batch->Put(cf, key_slice, value_slice);
+        /*if(putFlag == 0){ //we need 1 put to use Kreons iterator , if not segmentation
+            if (NULL != batch)
+            {
+                batch->Put(cf, key_slice, value_slice);
+            }
+            else
+            {
+                s = m_db->Put(opt, cf, key_slice, value_slice);
+            }
+            putFlag = 1;
+        }*/
+        
+        std::hash<size_t> hash_fn;
+        size_t sum = 0;
+        char* start = const_cast<char*>(key_slice.data());
+        for(unsigned int i = 0 ; i < key_slice.size(); i++){
+            sum += hash_fn(start[i]);
         }
-        else
-        {
-            s = m_db->Put(opt, cf, key_slice, value_slice);
-        }
-        //krc_put();
-        //testprint();
 
-        insert_key_value(hd, (void*) key_slice.data() , (void*)value_slice.data() , key_slice.size(), value_slice.size());
+        uint32_t db_id = hash_fn(sum) % Kreondbs_num;
+        insert_key_value(KreonDBs[db_id], (void*) key_slice.data() , (void*) value_slice.data(),key_slice.size() , value_slice.size() );
+        
         return rocksdb_err(s);
     }
 
@@ -963,19 +1001,31 @@ OP_NAMESPACE_BEGIN
         opt.fill_cache = g_db->GetConf().rocksdb_read_fill_cache;
         std::string& valstr = rocks_ctx.GetStringCache();
         Buffer& key_encode_buffer = rocks_ctx.GetEncodeBuferCache();
+        size_t key_len = key_encode_buffer.ReadableBytes();
+
         rocksdb::Slice key_slice = to_rocksdb_slice(key.Encode(key_encode_buffer));
-        rocksdb::Status s = m_db->Get(opt, cf, key_slice, &valstr);
+        //rocksdb::Status s = m_db->Get(opt, cf, key_slice, &valstr);
+        /*rocksdb::Status s  = rocksdb::Status::OK();
         int err = rocksdb_err(s);
         if (0 != err)
         {
             return err;
+        }*/
+        std::hash<size_t> hash_fn;
+        size_t sum = 0;
+        char* start = const_cast<char*>(key_slice.data());
+        for(unsigned int i = 0 ; i < key_slice.size(); i++){
+            sum += hash_fn(start[i]);
         }
-        /*Kreon find*/
-        void* found = find_key(hd , (void*) key_slice.data() , key_slice.size());
+
+        uint32_t db_id = hash_fn(sum) % Kreondbs_num;
+
+        void* found = find_key(KreonDBs[db_id] , (void*) key_slice.data() , key_slice.size());
         if(found == NULL){
-            std::cout << "Couldnt found inserted key" << std::endl;
-            exit(1);
+            //std::cout << "Couldnt found inserted key" << std::endl;
+            return ERR_ENTRY_NOT_EXIST;
         }
+        
         Buffer valBuffer(const_cast<char*>(valstr.data()), 0, valstr.size());
         value.Decode(valBuffer, true);
 
@@ -1117,6 +1167,7 @@ OP_NAMESPACE_BEGIN
         return 0 == Get(ctx, key, val);
     }
 
+    int snap=0;
     Iterator* RocksDBEngine::Find(Context& ctx, const KeyObject& key)
     {
         rocksdb::ReadOptions opt;
@@ -1175,6 +1226,7 @@ OP_NAMESPACE_BEGIN
             rocksiter->ns.ToMutableStr();
             //g_iter_cache.AddRunningIter(rocksiter);
         }
+        
         iter->SetIterator(rocksiter);
         if (key.GetType() > 0)
         {
@@ -1424,6 +1476,10 @@ OP_NAMESPACE_BEGIN
 
     EngineSnapshot RocksDBEngine::CreateSnapshot()
     {
+        for(int i = 0 ; i < Kreondbs_num; i++){
+            snapshot(KreonDBs[i]->volume_desc);
+        }
+
         return m_db->GetSnapshot();
     }
     void RocksDBEngine::ReleaseSnapshot(EngineSnapshot s)
@@ -1437,8 +1493,8 @@ OP_NAMESPACE_BEGIN
 
     void RocksDBIterator::SetIterator(RocksIterData* iter)
     {
+
         Kriter = (struct Kreoniterator*)malloc(sizeof(struct Kreoniterator));
-        snapshot(hd->volume_desc);
         m_iter = iter;
         m_rocks_iter = m_iter->iter;
     }
@@ -1467,12 +1523,21 @@ OP_NAMESPACE_BEGIN
         }
     }
     int myit=0;
+    int itdbnext=0;
     void RocksDBIterator::Next()
     {
+        //with this implementation iterator is bound to find end of database
+
         if(get_next(  Kriter ) == END_OF_DATABASE){
-            printf("END OF DATABASE \n");
-            exit(1);
+            itdbnext++;
+            seek_to_first(KreonDBs[itdbnext],Kriter);
+            if(itdbnext == Kreondbs_num){
+                printf("Found end of database \n");
+                m_rocks_iter = NULL;
+                return;
+            }
         }
+
 
        // ClearState();
        // if (NULL == m_rocks_iter)
@@ -1482,6 +1547,7 @@ OP_NAMESPACE_BEGIN
        // m_rocks_iter->Next();
        // CheckBound();
     }
+    
     void RocksDBIterator::Prev()
     {
         ClearState();
@@ -1489,7 +1555,18 @@ OP_NAMESPACE_BEGIN
         {
             return;
         }
-        m_rocks_iter->Prev();
+        if(get_prev(  Kriter ) == END_OF_DATABASE){
+            itdbnext--;
+            seek_to_last(KreonDBs[itdbnext],Kriter);
+            if(itdbnext < 0){
+                printf("Found end of database \n");
+                m_rocks_iter = NULL;
+                return;
+            }
+        }
+
+        //m_rocks_iter->Prev();
+
     }
     void RocksDBIterator::Jump(const KeyObject& next)
     {
@@ -1503,10 +1580,20 @@ OP_NAMESPACE_BEGIN
         }
         RocksDBLocalContext& rocks_ctx = g_rocks_context.GetValue();
         Slice key_slice = next.Encode(rocks_ctx.GetEncodeBuferCache(), false);
-        m_rocks_iter->Seek(to_rocksdb_slice(key_slice));
-
-        seek_to_first(hd , Kriter);
+        //m_rocks_iter->Seek(to_rocksdb_slice(key_slice));
         
+        //seek_to_first(hd , Kriter);
+ 
+        std::hash<size_t> hash_fn;
+        size_t sum = 0;
+        char* start = const_cast<char*>(key_slice.data());
+        for(unsigned int i = 0 ; i < key_slice.size(); i++){
+            sum += hash_fn(start[i]);
+        }
+
+        uint32_t db_id = hash_fn(sum) % Kreondbs_num;
+
+        Seek(KreonDBs[db_id],(void*) key_slice.data(), Kriter); 
         
         CheckBound();
     }
@@ -1517,7 +1604,9 @@ OP_NAMESPACE_BEGIN
         {
             return;
         }
-        m_rocks_iter->SeekToFirst();
+        //m_rocks_iter->SeekToFirst();
+
+        seek_to_first(KreonDBs[0],Kriter);
     }
     void RocksDBIterator::JumpToLast()
     {
@@ -1532,7 +1621,9 @@ OP_NAMESPACE_BEGIN
             Jump(m_iterate_upper_bound_key);
             if (!m_rocks_iter->Valid())
             {
-                m_rocks_iter->SeekToLast();
+                //m_rocks_iter->SeekToLast();
+                seek_to_last(KreonDBs[Kreondbs_num -1 ] , Kriter);
+                itdbnext = Kreondbs_num - 1;
             }
             else
             {
@@ -1541,7 +1632,9 @@ OP_NAMESPACE_BEGIN
         }
         else
         {
-            m_rocks_iter->SeekToLast();
+            //m_rocks_iter->SeekToLast();
+            seek_to_last(KreonDBs[Kreondbs_num -1 ] , Kriter);
+            itdbnext = Kreondbs_num - 1;
         }
     }
 
