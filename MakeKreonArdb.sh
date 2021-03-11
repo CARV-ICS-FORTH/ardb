@@ -1,5 +1,5 @@
 make clean
-cd ../../db_bench/kreon
+cd ../db_bench/kreon
 mkdir build
 cd build
 cmake3 ..

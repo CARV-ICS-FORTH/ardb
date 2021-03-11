@@ -44,7 +44,7 @@ extern "C"{
 #include "../../../../db_bench/kreon/kreon_lib/scanner/scanner.h"
 }
 
-std::string Kreon_volume_name = "/dev/dmap/dmap1";
+std::string Kreon_volume_name = "/tmp/data/kreon.dat";
 //std::string Kreon_volume_name= "/tmp/gstyl.dat";
 std::string  Kreon_name = "gstyl";
 int64_t device_size;
@@ -938,7 +938,7 @@ OP_NAMESPACE_BEGIN
 
         uint32_t db_id = hash_fn(sum) % Kreondbs_num;
         insert_key_value(KreonDBs[db_id], (void*) key_slice.data() , (void*) value_slice.data(),key_slice.size() , value_slice.size() );
-        
+        s = rocksdb::Status::OK(); 
         return rocksdb_err(s);
     }
 
@@ -1494,7 +1494,9 @@ OP_NAMESPACE_BEGIN
     void RocksDBIterator::SetIterator(RocksIterData* iter)
     {
 
-        Kriter = (struct Kreoniterator*)malloc(sizeof(struct Kreoniterator));
+        if(Kriter == NULL)
+            Kriter = (struct Kreoniterator*)malloc(sizeof(struct Kreoniterator));
+        
         m_iter = iter;
         m_rocks_iter = m_iter->iter;
     }
@@ -1581,9 +1583,8 @@ OP_NAMESPACE_BEGIN
         RocksDBLocalContext& rocks_ctx = g_rocks_context.GetValue();
         Slice key_slice = next.Encode(rocks_ctx.GetEncodeBuferCache(), false);
         //m_rocks_iter->Seek(to_rocksdb_slice(key_slice));
-        
-        //seek_to_first(hd , Kriter);
- 
+
+         
         std::hash<size_t> hash_fn;
         size_t sum = 0;
         char* start = const_cast<char*>(key_slice.data());
@@ -1592,9 +1593,15 @@ OP_NAMESPACE_BEGIN
         }
 
         uint32_t db_id = hash_fn(sum) % Kreondbs_num;
-
-        Seek(KreonDBs[db_id],(void*) key_slice.data(), Kriter); 
-        
+        struct Kreoniterator* it = (struct Kreoniterator* ) malloc(sizeof(struct Kreoniterator));
+       
+         
+        Seek(KreonDBs[db_id],(void*) key_slice.data(), it);
+        //Kriter = it; 
+        //free(it->sc);
+        //free(it);
+        delete_iterator(&it); 
+        //find_key(KreonDBs[db_id], (void*) key_slice.data() , key_slice.size());
         CheckBound();
     }
     void RocksDBIterator::JumpToFirst()
