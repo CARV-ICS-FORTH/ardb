@@ -14,3 +14,6 @@ cp _deps/log-build/liblog.a ../../rocksdb-5.14.2/
 #Build Ardb-Kreon
 cd ../../..
 make -j18
+
+#Build agian to resolve the error from ardb's make...
+make -j18
