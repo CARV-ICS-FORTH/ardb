@@ -1,14 +1,16 @@
-make clean
-cd ../db_bench/kreon
+#Build Kreon
+cd deps
+git clone git@carvgit.ics.forth.gr:evolve/kreon.git
+cd kreon
 mkdir build
 cd build
 cmake3 ..
 make
-cp kreon_lib/libkreon.a  ../../../ardb/deps/rocksdb-5.14.2/
-cp _deps/log-build/liblog.a ../../../ardb/deps/rocksdb-5.14.2/
-cd ../../../ardb/deps/rocksdb-5.14.2/
-echo "Fetched kreon static lib"
-cd ../../
-make -j12
 
-echo "Make Done"
+#Copy libs inside rocksDB
+cp kreon_lib/libkreon.a ../../rocksdb-5.14.2/
+cp _deps/log-build/liblog.a ../../rocksdb-5.14.2/
+
+#Build Ardb-Kreon
+cd ../../..
+make -j18

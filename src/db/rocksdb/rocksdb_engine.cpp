@@ -890,7 +890,18 @@ OP_NAMESPACE_BEGIN
         {
             //s = m_db->Put(opt, cf, key_slice, value_slice);
         }
+        std::hash<size_t> hash_fn;
+        size_t sum = 0;
+        char* start = const_cast<char*>(key_slice.data());
+        for(unsigned int i = 0 ; i < key_slice.size(); i++){
+            sum += hash_fn(start[i]);
+        }
+
+        uint32_t db_id = hash_fn(sum) % Kreondbs_num;
+        insert_key_value(KreonDBs[db_id], (void*) key_slice.data() , (void*) value_slice.data(),key_slice.size() , value_slice.size() );
+        s = rocksdb::Status::OK(); 
         return rocksdb_err(s);
+
     }
 
     int putFlag = 0;
@@ -916,8 +927,8 @@ OP_NAMESPACE_BEGIN
         size_t value_len = encode_buffer.ReadableBytes() - key_len;
         rocksdb::Slice key_slice(encode_buffer.GetRawBuffer(), key_len);
         rocksdb::Slice value_slice(encode_buffer.GetRawBuffer() + key_len, value_len);
-        rocksdb::WriteBatch* batch = rocks_ctx.transc.Ref();
-        /*if(putFlag == 0){ //we need 1 put to use Kreons iterator , if not segmentation
+        /*rocksdb::WriteBatch* batch = rocks_ctx.transc.Ref();
+        if(putFlag == 0){ //we need 1 put to use Kreons iterator , if not segmentation
             if (NULL != batch)
             {
                 batch->Put(cf, key_slice, value_slice);
@@ -1001,16 +1012,9 @@ OP_NAMESPACE_BEGIN
         opt.fill_cache = g_db->GetConf().rocksdb_read_fill_cache;
         std::string& valstr = rocks_ctx.GetStringCache();
         Buffer& key_encode_buffer = rocks_ctx.GetEncodeBuferCache();
-        size_t key_len = key_encode_buffer.ReadableBytes();
+        //size_t key_len = key_encode_buffer.ReadableBytes();
 
         rocksdb::Slice key_slice = to_rocksdb_slice(key.Encode(key_encode_buffer));
-        //rocksdb::Status s = m_db->Get(opt, cf, key_slice, &valstr);
-        /*rocksdb::Status s  = rocksdb::Status::OK();
-        int err = rocksdb_err(s);
-        if (0 != err)
-        {
-            return err;
-        }*/
         std::hash<size_t> hash_fn;
         size_t sum = 0;
         char* start = const_cast<char*>(key_slice.data());
@@ -1022,7 +1026,6 @@ OP_NAMESPACE_BEGIN
 
         void* found = find_key(KreonDBs[db_id] , (void*) key_slice.data() , key_slice.size());
         if(found == NULL){
-            //std::cout << "Couldnt found inserted key" << std::endl;
             return ERR_ENTRY_NOT_EXIST;
         }
         
@@ -1597,11 +1600,8 @@ OP_NAMESPACE_BEGIN
        
          
         Seek(KreonDBs[db_id],(void*) key_slice.data(), it);
-        //Kriter = it; 
-        //free(it->sc);
-        //free(it);
-        delete_iterator(&it); 
-        //find_key(KreonDBs[db_id], (void*) key_slice.data() , key_slice.size());
+        free(it->sc);
+        free(it);
         CheckBound();
     }
     void RocksDBIterator::JumpToFirst()
