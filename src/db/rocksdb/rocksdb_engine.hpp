@@ -47,9 +47,9 @@
 #include <sparsehash/dense_hash_map>
 #include <memory>
 extern "C"{
-#include "../../../../db_bench/kreon/kreon_lib/allocator/allocator.h"
-#include "../../../../db_bench/kreon/kreon_lib/btree/btree.h"
-#include "../../../../db_bench/kreon/kreon_lib/scanner/scanner.h"
+#include <allocator/allocator.h>
+#include <btree/btree.h>
+#include <scanner/scanner.h>
 }
 
 
