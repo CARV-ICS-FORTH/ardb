@@ -57,8 +57,7 @@ ROCKSDB_PATH=${LIB_PATH}/rocksdb-${ROCKSDB_VER}
 ROCKSDB_REMOTE_FILE=https://github.com/facebook/rocksdb/archive/v${ROCKSDB_VER}.tar.gz
 ROCKSDB_FILE=${ROCKSDB_PATH}.tar.gz
 ROCKSDB_LIBA=${ROCKSDB_PATH}/librocksdb.a
-KREON_LIBA=${ROCKSDB_PATH}/libkreon.a
-KREON_LIBLOG=${ROCKSDB_PATH}/liblog.a
+KREON_LIBA=${ROCKSDB_PATH}/libkreon2.a
 
 LEVELDB_VER=1.20
 LEVELDB_PATH=${LIB_PATH}/leveldb-${LEVELDB_VER}
@@ -246,8 +245,8 @@ else
 ifeq ($(storage_engine), rocksdb)
   STORAGE_ENGINE=$(ROCKSDB_LIBA)
   STORAGE_ENGINE_PATH=$(ROCKSDB_PATH)
-  INCS+=-I${ROCKSDB_PATH}/include -I${ROCKSDB_PATH} -I../deps/kreon/kreon_lib/ 
-  LIBS:= ${ROCKSDB_LIBA} ${SNAPPY_LIBA} ${LIBS} ${KREON_LIBA} ${KREON_LIBLOG} 
+  INCS+=-I${ROCKSDB_PATH}/include -I${ROCKSDB_PATH} -I../deps/kreon/kreon_lib/ -I../deps/kreon/build/install/usr/local/include/libbloom/
+  LIBS:= ${ROCKSDB_LIBA} ${SNAPPY_LIBA} ${LIBS} ${KREON_LIBA} 
   CXXFLAGS+=-D__USE_ROCKSDB__ -std=c++11
 else
 ifeq ($(storage_engine), wiredtiger)

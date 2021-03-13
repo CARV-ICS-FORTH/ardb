@@ -1,19 +1,24 @@
+#!/bin/bash
+
+#Build Ardb-Kreon this will command will fail but we need to run it to download the basic dependencies and create folders we will need later
+make -j18
+
 #Build Kreon
+rm -rf deps/kreon
 cd deps
 git clone git@carvgit.ics.forth.gr:evolve/kreon.git
 cd kreon
 mkdir build
 cd build
-cmake3 ..
-make
+cmake3 .. -DKREON_BUILD_CPACK=True
+make DESTDIR=install -j install
+cd ../scripts
+./pack-staticlib.py ../build/install/usr/local/lib64/
 
 #Copy libs inside rocksDB
-cp kreon_lib/libkreon.a ../../rocksdb-5.14.2/
-cp _deps/log-build/liblog.a ../../rocksdb-5.14.2/
+cd ../build/
+cp install/usr/local/lib64/libkreon2.a ../../rocksdb-5.14.2/
 
-#Build Ardb-Kreon
-cd ../../..
-make -j18
-
-#Build agian to resolve the error from ardb's make...
+cd ../../../
+#Build again to resolve the error from ardb's make...
 make -j18
