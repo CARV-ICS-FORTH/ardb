@@ -12,8 +12,13 @@ make DESTDIR=install -j install
 cd ../scripts
 ./pack-staticlib.py ../build/install/usr/local/lib64/
 
+cd ../../../
+
+#This command always fails in order to download dependencies
+make -j $(nproc)
+
 #Copy libs inside rocksDB
-cd ../build/
+cd deps/kreon/build
 cp install/usr/local/lib64/libkreon2.a ../../rocksdb-5.14.2/
 
 cd ../../../
