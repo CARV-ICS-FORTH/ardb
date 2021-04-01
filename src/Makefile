@@ -245,7 +245,7 @@ else
 ifeq ($(storage_engine), rocksdb)
   STORAGE_ENGINE=$(ROCKSDB_LIBA)
   STORAGE_ENGINE_PATH=$(ROCKSDB_PATH)
-  INCS+=-I${ROCKSDB_PATH}/include -I${ROCKSDB_PATH} -I../deps/kreon/kreon_lib/ -I../deps/kreon/build/install/usr/local/include/libbloom/
+  INCS+=-I${ROCKSDB_PATH}/include -I${ROCKSDB_PATH} -I../deps/kreon/kreon_lib/ -I../deps/kreon/  -I../deps/kreon/build/install/usr/local/include/libbloom/
   LIBS:= ${ROCKSDB_LIBA} ${SNAPPY_LIBA} ${LIBS} ${KREON_LIBA} 
   CXXFLAGS+=-D__USE_ROCKSDB__ -std=c++11
 else
