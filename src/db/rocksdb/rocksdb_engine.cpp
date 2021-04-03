@@ -44,9 +44,9 @@ extern "C"{
 #include <scanner/scanner.h>
 }
 
-std::string Kreon_volume_name = "/tmp/data/kreon.dat";
+std::string Kreon_volume_name;
 //std::string Kreon_volume_name= "/tmp/gstyl.dat";
-std::string  Kreon_name = "gstyl";
+std::string  Kreon_name = "Kreon";
 int64_t device_size;
 //db_handle* hd = NULL;
 db_handle* KreonDBs[64];
@@ -826,6 +826,8 @@ OP_NAMESPACE_BEGIN
         m_options.IncreaseParallelism();
         m_options.stats_dump_period_sec = (unsigned int) g_db->GetConf().statistics_log_period;
         m_dbdir = dir;
+	printf("Opening Kreon volume at:>%s\n" , (m_dbdir.substr(0,m_dbdir.size() - 7) + "kreon.dat").c_str());
+	Kreon_volume_name = (m_dbdir.substr(0,m_dbdir.size() - 7 ) + "kreon.dat").c_str();
         return ReOpen(m_options);
     }
 
