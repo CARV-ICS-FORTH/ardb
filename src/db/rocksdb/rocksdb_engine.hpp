@@ -48,7 +48,6 @@
 #include <sparsehash/dense_hash_map>
 #include <memory>
 extern "C"{
-#include <build/config.h>
 #include <allocator/allocator.h>
 #include <btree/btree.h>
 #include <scanner/scanner.h>

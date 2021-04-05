@@ -1,25 +1,9 @@
 #!/bin/bash
 
-#Build Kreon
+# Build Kreon
 rm -rf deps/kreon
-cd deps
-git clone git@carvgit.ics.forth.gr:gxanth/kreon.git -b cursors
-cd kreon
-mkdir build
-cd build
-cmake3 ..
-make DESTDIR=install -j install
-cd ../scripts
-./pack-staticlib.py ../build/install/usr/local/lib64/
+(cd deps && git clone https://github.com/CARV-ICS-FORTH/kreon.git)
+mkdir deps/kreon/build && (cd deps/kreon/build && cmake3 .. && make)
 
-cd ../../../
-
-#This command always fails in order to download dependencies
-make -j $(nproc)
-
-#Copy libs inside rocksDB
-cd deps/kreon/build
-cp install/usr/local/lib64/libkreon2.a ../../rocksdb-5.14.2/
-
-cd ../../../
-make -j $(nproc)
+# Build Ardb
+make server

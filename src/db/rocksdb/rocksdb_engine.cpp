@@ -39,14 +39,8 @@
 #include "db/db.hpp"
 #include "util/string_helper.hpp"
 #include <iostream>
-extern "C"{
-#include <allocator/allocator.h>
-#include <btree/btree.h>
-#include <scanner/scanner.h>
-}
 
 std::string Kreon_volume_name;
-//std::string Kreon_volume_name= "/tmp/gstyl.dat";
 std::string  Kreon_name = "Kreon";
 int64_t device_size;
 //db_handle* hd = NULL;
