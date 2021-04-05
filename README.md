@@ -4,6 +4,29 @@
 [![Build Status](https://travis-ci.org/yinqiwen/ardb.svg?branch=master)](https://travis-ci.org/yinqiwen/ardb)  
 Ardb is a BSD licensed, redis-protocol compatible persistent nosql, it support multiple storage engines as backend like [Google's LevelDB](https://github.com/google/leveldb), [Facebook's RocksDB](https://github.com/facebook/rocksdb), [OpenLDAP's LMDB](http://symas.com/mdb/), [WiredTiger](http://www.wiredtiger.com/), [PerconaFT](https://github.com/percona/PerconaFT),[Couchbase's ForestDB](https://github.com/couchbase/forestdb) the default backend is [Facebook's RocksDB](https://github.com/facebook/rocksdb).
 
+## Kreon support
+
+This repository adds [Kreon](https://github.com/CARV-ICS-FORTH/kreon) support to Ardb.
+This is accomplished by intercepting the calls to RocksDB. Kreon provides the same semantics for most of the operations such as put , get, scans, and deletes but it does not provide the same semantics for write batches. Kreon does not support transactions so the semantics for write batches are relaxed compared to RocksDB. That means when commiting a write batch the issued operations are not atomic.
+
+To compile, use the default instructions for `rocksdb` or the included `Dockerfile`. Both use the `MakeKreonArdb.sh` script. Pre-built containers are [available](https://hub.docker.com/r/carvicsforth/kreon-ardb).
+
+##### Running Ardb with Kreon and YCSB
+
+- Clone YCSB
+    - `git clone https://github.com/brianfrankcooper/YCSB.git`
+
+- Run Ardb
+    - cd to Ardb's directory
+    - change the data-dir variable in ardb.conf to point where data will be placed (dir should exist).
+    - `fallocate -l sizeGB path-to-data-dir/kreon.dat`
+    - `cd deps/kreon/build/tests`
+    - `./mkfs.kreon.single.sh path-to-data-dir/kreon.dat 1 1`
+    - cd to Ardb's directory
+    - `src/ardb-server path-to-ardb-dir/ardb.conf`
+- run YCSB's workloads
+    - cd to YCSB's home dir
+    - `bin/ycsb load|run redis -s -P workloads/workload -p "redis.host=server-ip" -p "redis.port=16379" -p redis.timeout=5000000 -threads thread_num`
 
 ## Compile
 Rocksdb is the default storage engine, to compile with rocksdb, just type `make` to compile server & lib & tests.
@@ -20,35 +43,6 @@ To use LMDB or LevelDB or WiredTiger as storage engine, you should set env `stor
 
 It should compile to several executables in `src` directory, such as ardb-server, ardb-test etc.
 
-# Ardb-Kreon
-
-In this project we integrate Ardb to use Kreon by intercepting the calls to RocksDB.  
-Kreon provides the same semantics for most of the operations such as Put,Get,Scans, and Deletes but it does not provide the same semantics for write batches.  
-Kreon does not support transactions so the semantics for write batches are relaxed compared to RocksDB.  
-That means when commiting a write batch the issued operations are not atomic.
-
-# Building Ardb with Kreon
-
-- `git clone git@carvgit.ics.forth.gr:geostyl/ardb.git`
-- `cd ardb && sh MakeKreonArdb.sh`
-
-# Running Ardb with Kreon and YCSB
-
-- Clone YCSB
-    - `git clone https://github.com/brianfrankcooper/YCSB.git`
-    
-- Run Ardb
-    - cd to Ardb's directory
-    - change the data-dir variable in ardb.conf to point where data will be placed (dir should exist).
-    - `fallocate -l sizeGB path-to-data-dir/kreon.dat`
-    - `cd deps/kreon/build/tests`
-    - `./mkfs.kreon.single.sh path-to-data-dir/kreon.dat 1 1`
-    - cd Ardb's directory
-    - src/ardb-server path-to ardb-dir/ardb.conf
-- run YCSB's workloads
-    - cd YCSB's home dir
-    - bin/ycsb load|run  redis -s -P workloads/workload -p "redis.host=server-ip" -p "redis.port=16379" -p redis.timeout=5000000 -threads thread_num
- 
 
 ## Features
 - Full redis-protocol compatibility
