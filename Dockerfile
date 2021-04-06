@@ -1,4 +1,7 @@
-FROM centos:7.7.1908
+################################################################################
+# Builder image
+################################################################################
+FROM centos:7.7.1908 as ardb-kreon-builder
 
 # Install dependencies
 RUN yum groupinstall -y "Development Tools" && \
@@ -12,17 +15,40 @@ RUN yum groupinstall -y "Development Tools" && \
         /usr/share/doc \
         /usr/share/doc-base
 
-COPY . /root/ardb
+WORKDIR /root
+COPY . ardb-kreon
 
-# Download and build Kreon
-# FIXME: Build as "Release"...
-WORKDIR /root/ardb/deps
-RUN git clone https://github.com/CARV-ICS-FORTH/kreon.git && \
-    sed -i "s/14bd35e20438bf8b7c45d37a66c71461d3cdfa94/ac7843ed930a43da34f35eebfa4447c6ac2f34e5/" kreon/CMakeLists.txt && \
-    mkdir kreon/build && \
-    (cd kreon/build && scl enable devtoolset-7 -- /bin/bash -c "cmake3 -DKREON_BUILD_CPACK=True .. && make DESTDIR=install install") && \
-    (cd kreon/scripts && ./pack-staticlib.py ../build/install/usr/local/lib64/) && \
-    cp kreon/build/install/usr/local/lib64/libkreon2.a rocksdb-5.14.2/
+# Build
+RUN (cd ardb-kreon && scl enable devtoolset-7 -- /bin/bash -c "./MakeKreonArdb.sh")
+RUN strip ardb-kreon/src/ardb-server
+RUN strip ardb-kreon/deps/kreon/build/mkfs.kreon
 
-WORKDIR /root/ardb
-RUN make
+################################################################################
+# Ardb-Kreon distribution
+################################################################################
+FROM centos:7.7.1908 as ardb-kreon
+
+# Install dependencies
+RUN yum install -y numactl && \
+    yum clean all \
+    && rm -rf /var/cache/yum \
+        /tmp/* \
+        /var/tmp/* \
+        /usr/share/man \
+        /usr/share/doc \
+        /usr/share/doc-base
+
+COPY --from=ardb-kreon-builder /root/ardb-kreon/ardb.conf /etc
+COPY --from=ardb-kreon-builder /root/ardb-kreon/src/ardb-server /usr/bin
+COPY --from=ardb-kreon-builder /root/ardb-kreon/deps/kreon/build/kreon_lib/mkfs.kreon /usr/bin
+
+RUN sed -ri 's|^home(\s)+..|home /var/ardb|' /etc/ardb.conf && \
+    sed -i 's|16379|6379|' /etc/ardb.conf && \
+    mkdir -p /var/ardb/data
+
+EXPOSE 6379
+
+WORKDIR /
+COPY start.sh /
+ENV DATABASE_SIZE 20
+CMD ./start.sh
