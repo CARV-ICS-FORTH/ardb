@@ -21,7 +21,7 @@ COPY . ardb-kreon
 # Build
 RUN (cd ardb-kreon && scl enable devtoolset-7 -- /bin/bash -c "./MakeKreonArdb.sh")
 RUN strip ardb-kreon/src/ardb-server
-RUN strip ardb-kreon/deps/kreon/build/mkfs.kreon
+RUN strip ardb-kreon/deps/kreon/build/kreon_lib/mkfs.kreon
 
 ################################################################################
 # Ardb-Kreon distribution

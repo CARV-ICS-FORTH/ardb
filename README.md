@@ -6,27 +6,36 @@ Ardb is a BSD licensed, redis-protocol compatible persistent nosql, it support m
 
 ## Kreon support
 
-This repository adds [Kreon](https://github.com/CARV-ICS-FORTH/kreon) support to Ardb.
-This is accomplished by intercepting the calls to RocksDB. Kreon provides the same semantics for most of the operations such as put , get, scans, and deletes but it does not provide the same semantics for write batches. Kreon does not support transactions so the semantics for write batches are relaxed compared to RocksDB. That means when commiting a write batch the issued operations are not atomic.
+This repository adds [Kreon](https://github.com/CARV-ICS-FORTH/kreon) support to Ardb, which is accomplished by intercepting the calls to RocksDB. Kreon provides the same semantics for most of the operations, such as put, get, scans, and deletes, but not for write batches. Kreon does not yet support transactions, so the semantics for write batches are relaxed compared to RocksDB. When commiting a write batch, the issued operations are not atomic.
 
-To compile, use the default instructions for `rocksdb` or the included `Dockerfile`. Both use the `MakeKreonArdb.sh` script. Pre-built containers are [available](https://hub.docker.com/r/carvicsforth/kreon-ardb).
+To compile, use the `MakeKreonArdb.sh` script.
 
-##### Running Ardb with Kreon and YCSB
+##### Running Ardb with Kreon via Docker
 
-- Clone YCSB
-    - `git clone https://github.com/brianfrankcooper/YCSB.git`
+Pre-built containers are [available](https://hub.docker.com/r/carvicsforth/ardb-kreon). The `ardb-kreon` container can be used as a drop-in replacement (it listens on port 6379 by default). The Kreon data file is 20 GB by default and created in `/var/ardb/data/`. Its size is configurable via the `DATABASE_SIZE` environmental variable. To persist storage accross runs, mount a local folder at `/var/ardb` (logs are also placed within).
 
-- Run Ardb
-    - cd to Ardb's directory
-    - change the data-dir variable in ardb.conf to point where data will be placed (dir should exist).
-    - `fallocate -l sizeGB path-to-data-dir/kreon.dat`
-    - `cd deps/kreon/build/tests`
-    - `./mkfs.kreon.single.sh path-to-data-dir/kreon.dat 1 1`
-    - cd to Ardb's directory
-    - `src/ardb-server path-to-ardb-dir/ardb.conf`
-- run YCSB's workloads
-    - cd to YCSB's home dir
-    - `bin/ycsb load|run redis -s -P workloads/workload -p "redis.host=server-ip" -p "redis.port=16379" -p redis.timeout=5000000 -threads thread_num`
+To run:
+```sh
+mkdir -p ${PWD}/ardb-kreon/data
+docker run --rm -p 6379:6379 \
+  --name ardb-kreon \
+  -v ${PWD}/ardb-kreon:/var/ardb \
+  -e "DATABASE_SIZE=20" \
+  carvicsforth/ardb-kreon:20210406
+```
+
+##### Running Ardb with Kreon locally
+
+To run locally:
+- change the `data-dir` variable in `ardb.conf` to point where data will be placed (dir should exist).
+- `fallocate -l sizeGB path-to-data-dir/kreon.dat`
+- `./deps/kreon/build/tests/mkfs.kreon.single.sh path-to-data-dir/kreon.dat 1 1`
+- `src/ardb-server ${PWD}/ardb.conf`
+
+Running YCSB workloads:
+- `git clone https://github.com/brianfrankcooper/YCSB.git`
+- `cd YCSB`
+- `bin/ycsb load|run redis -s -P workloads/workload -p "redis.host=127.0.0.1" -p "redis.port=16379" -p redis.timeout=5000000 -threads thread_num`
 
 ## Compile
 Rocksdb is the default storage engine, to compile with rocksdb, just type `make` to compile server & lib & tests.
