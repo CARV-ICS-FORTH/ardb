@@ -1597,8 +1597,9 @@ OP_NAMESPACE_BEGIN
        
          
         Seek(KreonDBs[db_id],(void*) key_slice.data(), it);
-        free(it->sc);
-        free(it);
+        //cant copy it->sc to m_rocksdb_iter thats why we result in read-failed
+        //although the op was successfull
+        closeScanner(it->sc);
         CheckBound();
     }
     void RocksDBIterator::JumpToFirst()
