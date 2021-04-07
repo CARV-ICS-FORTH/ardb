@@ -21,7 +21,7 @@ docker run --rm -p 6379:6379 \
   --name ardb-kreon \
   -v ${PWD}/ardb-kreon:/var/ardb \
   -e "DATABASE_SIZE=20" \
-  carvicsforth/ardb-kreon:20210406
+  carvicsforth/ardb-kreon:20210407
 ```
 
 ##### Running Ardb with Kreon locally
