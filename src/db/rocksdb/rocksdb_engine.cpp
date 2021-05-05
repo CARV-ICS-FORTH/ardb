@@ -1021,12 +1021,17 @@ OP_NAMESPACE_BEGIN
 
         uint32_t db_id = hash_fn(sum) % Kreondbs_num;
 
-        void* found = find_key(KreonDBs[db_id] , (void*) key_slice.data() , key_slice.size());
-        if(found == NULL){
+        void* retrieved_kv = find_key(KreonDBs[db_id] , (void*) key_slice.data() , key_slice.size());
+        if(retrieved_kv == NULL){
             return ERR_ENTRY_NOT_EXIST;
         }
         
-        Buffer valBuffer(const_cast<char*>(valstr.data()), 0, valstr.size());
+        uint32_t key_size = *(uint32_t*) retrieved_kv;
+        uint32_t value_size = *(uint32_t*) ( retrieved_kv +  sizeof(uint32_t) + key_size );
+
+        //printf("key size %d value size %d\n", key_size , value_size);
+
+        Buffer valBuffer((char*) (retrieved_kv + (2 * sizeof(uint32_t)) + key_size), 0, value_size);
         value.Decode(valBuffer, true);
 
         return 0;
