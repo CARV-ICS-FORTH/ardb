@@ -6,6 +6,8 @@ Ardb is a BSD licensed, redis-protocol compatible persistent nosql, it support m
 
 ## Kreon support
 
+> :warning: **This implementation is experimental:** This repository is a proof-of-concept of integrating Kreon to Ardb through the RocksDB API. Some features may not work. We have also implemented a direct-to-Kreon plug-in for Ardb in [kreon-ardb](https://github.com/CARV-ICS-FORTH/kreon-ardb) which should be more stable.
+
 This repository adds [Kreon](https://github.com/CARV-ICS-FORTH/kreon) support to Ardb, which is accomplished by intercepting the calls to RocksDB. Kreon provides the same semantics for most of the operations, such as put, get, scans, and deletes, but not for write batches. Kreon does not yet support transactions, so the semantics for write batches are relaxed compared to RocksDB. When commiting a write batch, the issued operations are not atomic.
 
 To compile, use the `MakeKreonArdb.sh` script.
